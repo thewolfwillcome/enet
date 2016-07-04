@@ -26,12 +26,12 @@
     at any given time.
 */
 ENetHost *
-enet_host_create (const ENetAddress * address, size_t peerCount, size_t channelLimit, enet_uint32 incomingBandwidth, enet_uint32 outgoingBandwidth)
+enet_host_create (const ENetAddress * address, int isHost, size_t peerCount, size_t channelLimit, enet_uint32 incomingBandwidth, enet_uint32 outgoingBandwidth)
 {
     ENetHost * host;
     ENetPeer * currentPeer;
 
-    if (peerCount > ENET_PROTOCOL_MAXIMUM_PEER_ID)
+    if (peerCount > ENET_PROTOCOL_MAXIMUM_PEER_ID || NULL == address)
       return NULL;
 
     host = (ENetHost *) enet_malloc (sizeof (ENetHost));
@@ -48,14 +48,16 @@ enet_host_create (const ENetAddress * address, size_t peerCount, size_t channelL
     }
     memset (host -> peers, 0, peerCount * sizeof (ENetPeer));
 
-    host -> socket = enet_socket_create (ENET_SOCKET_TYPE_DATAGRAM, address -> family);
+	enet_uint16 family = address->family;
+
+    host -> socket = enet_socket_create (ENET_SOCKET_TYPE_DATAGRAM, family);
     if (host -> socket != ENET_SOCKET_NULL)
     {
       // Disable ipv6 only mode, when disabled also ipv4 clients can connect
       // This call works only when dualstack is enabled so it is no failure when it failes
       enet_socket_set_option (host -> socket, ENET_SOCKOPT_IPV6_V6ONLY, 0);
     }
-    if (host -> socket == ENET_SOCKET_NULL || (address != NULL && enet_socket_bind (host -> socket, address) < 0))
+    if (host -> socket == ENET_SOCKET_NULL || (isHost && enet_socket_bind (host -> socket, address) < 0))
     {
        if (host -> socket != ENET_SOCKET_NULL)
          enet_socket_destroy (host -> socket);
@@ -75,7 +77,7 @@ enet_host_create (const ENetAddress * address, size_t peerCount, size_t channelL
     // This call works only when dualstack is enabled so it is no failure when it failes
     enet_socket_set_option (host -> socket, ENET_SOCKOPT_IPV6_V6ONLY, 0);
 
-    if (address != NULL && enet_socket_get_address (host -> socket, & host -> address) < 0)
+    if (isHost && enet_socket_get_address (host -> socket, & host -> address) < 0)
       host -> address = * address;
 
     if (! channelLimit || channelLimit > ENET_PROTOCOL_MAXIMUM_CHANNEL_COUNT)
@@ -97,9 +99,12 @@ enet_host_create (const ENetAddress * address, size_t peerCount, size_t channelL
     host -> commandCount = 0;
     host -> bufferCount = 0;
     host -> checksum = NULL;
-    host -> receivedAddress.family = AF_INET; // IPv4
+    host -> receivedAddress.family = family; // IPv4 / IPV6
     host -> receivedAddress.port = 0;
-    host -> receivedAddress.ip.v4.host = ENET_HOST_ANY;
+	if (family == AF_INET)
+		host -> receivedAddress.ip.v4.host = ENET_HOST_ANY;
+	else if (family == AF_INET6)
+		memcpy(host -> receivedAddress.ip.v6.host, &in6addr_any, sizeof(in6addr_any));
     host -> receivedData = NULL;
     host -> receivedDataLength = 0;
 
