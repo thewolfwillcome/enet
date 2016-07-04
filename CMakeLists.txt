@@ -49,7 +49,7 @@ endif()
 if(HAS_SOCKLEN_T)
     add_definitions(-DHAS_SOCKLEN_T=1)
 endif()
- 
+
 include_directories(${PROJECT_SOURCE_DIR}/include)
  
 add_library(enet STATIC
@@ -63,3 +63,16 @@ add_library(enet STATIC
         unix.c
         win32.c
     )
+
+# Installations
+# Note the trailing slash in the argument to the `DIRECTORY' directive
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/
+  DESTINATION include/enet
+  PATTERN "internal" EXCLUDE
+)
+install(TARGETS enet
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  FRAMEWORK DESTINATION Library/Frameworks
+)
