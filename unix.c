@@ -72,6 +72,7 @@ enet_address_get_size (const ENetAddress * address)
         case AF_INET:  return (sizeof (struct sockaddr_in));
         case AF_INET6: return (sizeof (struct sockaddr_in6));
     };
+	return 0;
 }
 
 int
@@ -138,7 +139,7 @@ enet_address_set_host (ENetAddress * address, const char * name)
     if (resultList == NULL) return -1;
 
     // We simply grab the first information (IPv6 is sorted first so we get IPv6 information when IPv6 is enabled!
-    memcopy(&address, resultList -> ai_addr, resultList -> ai_addrlen);
+    memcpy(&address, resultList -> ai_addr, resultList -> ai_addrlen);
     address -> port = ENET_NET_TO_HOST_16 (address -> port);
 
     freeaddrinfo (resultList);
@@ -179,7 +180,7 @@ enet_socket_bind (ENetSocket socket, const ENetAddress * address)
     const size_t length = enet_address_get_size (address);
     ENetAddress * clone;
 
-    memcopy (& clone, address, length);
+    memcpy (& clone, address, length);
     clone -> port = ENET_HOST_TO_NET_16 (address -> port);
 
     return bind (socket, (struct sockaddr *) clone, length);
@@ -297,7 +298,7 @@ enet_socket_connect (ENetSocket socket, const ENetAddress * address)
     size_t length = enet_address_get_size (address);
     ENetAddress * clone;
 
-    memcopy (& clone, address, length);
+    memcpy (& clone, address, length);
     clone -> port = ENET_HOST_TO_NET_16 (address -> port);
 
     result = connect (socket, (struct sockaddr *) & clone, length);
@@ -357,7 +358,7 @@ enet_socket_send (ENetSocket socket,
         msgHdr.msg_name = & address_clone;
         msgHdr.msg_namelen = enet_address_get_size (address);
 
-        memcopy (& address_clone, address, msgHdr.msg_namelen);
+        memcpy (& address_clone, address, msgHdr.msg_namelen);
 
         address_clone.port = ENET_HOST_TO_NET_16 (address -> port);
     }

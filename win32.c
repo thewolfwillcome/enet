@@ -19,6 +19,7 @@ enet_address_get_size (const ENetAddress * address)
         case AF_INET:  return (sizeof (struct sockaddr_in));
         case AF_INET6: return (sizeof (struct sockaddr_in6));
     };
+	return 0;
 }
 
 int
@@ -96,7 +97,7 @@ enet_address_set_host (ENetAddress * address, const char * name)
     if (resultList == NULL) return -1;
 
     // We simply grab the first information (IPv6 is sorted first so we get IPv6 information when IPv6 is enabled!
-    memcopy(&address, resultList -> ai_addr, resultList -> ai_addrlen);
+    memcpy(&address, resultList -> ai_addr, resultList -> ai_addrlen);
     address -> port = ENET_NET_TO_HOST_16 (address -> port);
 
     freeaddrinfo (resultList);
@@ -106,7 +107,7 @@ enet_address_set_host (ENetAddress * address, const char * name)
 int
 enet_address_get_host_ip (const ENetAddress * address, char * name, size_t nameLength)
 {
-    void * host_ptr;
+    const void * host_ptr;
     switch (address -> family) {
         case AF_INET:
              host_ptr = & address -> ip.v4.host;
@@ -115,9 +116,9 @@ enet_address_get_host_ip (const ENetAddress * address, char * name, size_t nameL
              host_ptr = & address -> ip.v6.host;
              break;
         default:
-             host_ptr == NULL; // avoid wild pointer
+             host_ptr = NULL; // avoid wild pointer
     }
-    return (inet_ntop (address -> family, host_ptr, name, nameLength) == NULL) ? -1 : 0;
+    return (inet_ntop (address -> family, (void *)host_ptr, name, nameLength) == NULL) ? -1 : 0;
 }
 
 int
@@ -130,11 +131,6 @@ enet_address_get_host (const ENetAddress * address, char * name, size_t nameLeng
 
     // return IP address if name lookup is unsuccessful
     return (error_code == 0) ? 0 : enet_address_get_host_ip (address, name, nameLength);
-       size_t hostLen = strlen (hostEntry -> h_name);
-       if (hostLen >= nameLength)
-         return -1;
-       memcpy (name, hostEntry -> h_name, hostLen + 1);
-    }
 }
 
 int
@@ -143,7 +139,7 @@ enet_socket_bind (ENetSocket socket, const ENetAddress * address)
     const size_t length = enet_address_get_size (address);
     ENetAddress * clone;
 
-    memcopy (& clone, address, length);
+    memcpy (& clone, address, length);
     clone -> port = ENET_HOST_TO_NET_16 (address -> port);
 
     return bind (socket, (struct sockaddr *) clone, length);
@@ -249,7 +245,7 @@ enet_socket_connect (ENetSocket socket, const ENetAddress * address)
     size_t length = enet_address_get_size (address);
     ENetAddress * clone;
 
-    memcopy (& clone, address, length);
+    memcpy (& clone, address, length);
     clone -> port = ENET_HOST_TO_NET_16 (address -> port);
 
     result = connect (socket, (struct sockaddr *) & clone, length);
@@ -304,7 +300,7 @@ enet_socket_send (ENetSocket socket,
 
     if (address != NULL)
     {
-        memcopy (& address_clone, address, address_length);
+        memcpy (& address_clone, address, address_length);
 
         address_clone.port = ENET_HOST_TO_NET_16 (address -> port);
     }
