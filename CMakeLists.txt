@@ -63,11 +63,24 @@ add_library(enet STATIC
         unix.c
         win32.c
     )
+    
+set_target_properties(enet PROPERTIES
+			COMPILE_PDB_NAME_RELWITHDEBINFO enet
+			COMPILE_PDB_NAME_DEBUG enetd
+		)
+
+		if(MSVC)
+			# Since COMPILE_PDB_* was added in 3.1, we don't support correctly generated pdbs for static libraries in earlier CMake versions
+			if(NOT "${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" VERSION_LESS "3.1")
+				install(FILES "${CMAKE_CURRENT_BINARY_DIR}/enet.pdb" DESTINATION lib CONFIGURATIONS RelWithDebInfo)
+				install(FILES "${CMAKE_CURRENT_BINARY_DIR}/enetd.pdb" DESTINATION lib CONFIGURATIONS Debug)
+			endif()
+		endif(MSVC)
 
 # Installations
 # Note the trailing slash in the argument to the `DIRECTORY' directive
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/
-  DESTINATION include/enet
+  DESTINATION include/
   PATTERN "internal" EXCLUDE
 )
 install(TARGETS enet
