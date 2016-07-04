@@ -62,7 +62,8 @@ typedef enum _ENetSocketOption
    ENET_SOCKOPT_RCVTIMEO  = 6,
    ENET_SOCKOPT_SNDTIMEO  = 7,
    ENET_SOCKOPT_ERROR     = 8,
-   ENET_SOCKOPT_NODELAY   = 9
+   ENET_SOCKOPT_NODELAY   = 9,
+   ENET_SOCKOPT_IPV6_V6ONLY = 10
 } ENetSocketOption;
 
 typedef enum _ENetSocketShutdown
@@ -558,7 +559,7 @@ ENET_API void enet_time_set (enet_uint32);
 /** @defgroup socket ENet socket functions
     @{
 */
-ENET_API ENetSocket enet_socket_create (ENetSocketType);
+ENET_API ENetSocket enet_socket_create (ENetSocketType, enet_uint16 family);
 ENET_API int        enet_socket_bind (ENetSocket, const ENetAddress *);
 ENET_API int        enet_socket_get_address (ENetSocket, ENetAddress *);
 ENET_API int        enet_socket_listen (ENetSocket, int);

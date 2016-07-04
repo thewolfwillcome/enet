@@ -83,15 +83,23 @@ const static struct addrinfo hints = {
 int
 enet_address_set_host (ENetAddress * address, const char * name)
 {
-    struct addrinfo * result_box;
+    struct addrinfo * resultList;
     int error_code;
 
-    error_code = getaddrinfo(name, NULL, &hints, &result_box);
-    if (error_code != 0) return error_code;
-    if (result_box == NULL) return -1;
+    error_code = getaddrinfo(name, NULL, &hints, &resultList);
+    if (error_code != 0)
+    {
+      if (resultList != NULL)
+        freeaddrinfo (resultList);
+      return error_code;
+    }
+    if (resultList == NULL) return -1;
 
-    memcopy(&address, result_box -> ai_addr, result_box -> ai_addrlen);
+    // We simply grab the first information (IPv6 is sorted first so we get IPv6 information when IPv6 is enabled!
+    memcopy(&address, resultList -> ai_addr, resultList -> ai_addrlen);
     address -> port = ENET_NET_TO_HOST_16 (address -> port);
+
+    freeaddrinfo (resultList);
     return error_code;
 }
 
@@ -161,9 +169,9 @@ enet_socket_listen (ENetSocket socket, int backlog)
 }
 
 ENetSocket
-enet_socket_create (ENetSocketType type)
+enet_socket_create (ENetSocketType type, enet_uint16 family)
 {
-    return socket (PF_INET, type == ENET_SOCKET_TYPE_DATAGRAM ? SOCK_DGRAM : SOCK_STREAM, 0);
+    return socket (family, type == ENET_SOCKET_TYPE_DATAGRAM ? SOCK_DGRAM : SOCK_STREAM, 0);
 }
 
 int
@@ -205,6 +213,10 @@ enet_socket_set_option (ENetSocket socket, ENetSocketOption option, int value)
 
         case ENET_SOCKOPT_NODELAY:
             result = setsockopt (socket, IPPROTO_TCP, TCP_NODELAY, (char *) & value, sizeof (int));
+            break;
+
+        case ENET_SOCKOPT_IPV6_V6ONLY:
+            result = setsockopt (socket, IPPROTO_IPV6, IPV6_V6ONLY, (char *) & value, sizeof (int));
             break;
 
         default:

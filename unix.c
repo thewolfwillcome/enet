@@ -125,48 +125,23 @@ const static struct addrinfo hints = {
 int
 enet_address_set_host (ENetAddress * address, const char * name)
 {
-#ifdef HAS_GETADDRINFO
-    struct addrinfo hints, * resultList = NULL, * result = NULL;
+    struct addrinfo * resultList;
+    int error_code;
 
-    memset (& hints, 0, sizeof (hints));
-    hints.ai_family = AF_INET;
-
-    if (getaddrinfo (name, NULL, NULL, & resultList) != 0)
-      return -1;
-
-    for (result = resultList; result != NULL; result = result -> ai_next)
+    error_code = getaddrinfo(name, NULL, &hints, &resultList);
+    if (error_code != 0)
     {
-        if (result -> ai_family == AF_INET && result -> ai_addr != NULL && result -> ai_addrlen >= sizeof (struct sockaddr_in))
-        {
-            struct sockaddr_in * sin = (struct sockaddr_in *) result -> ai_addr;
-
-            address -> host = sin -> sin_addr.s_addr;
-
-            freeaddrinfo (resultList);
-
-            return 0;
-        }
+      if (resultList != NULL)
+        freeaddrinfo (resultList);
+      return error_code;
     }
+    if (resultList == NULL) return -1;
 
-    if (resultList != NULL)
-      freeaddrinfo (resultList);
-#else
-#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__DragonFly__)
-    if (hostEntry != NULL && hostEntry -> h_addrtype == AF_INET)
-        address -> host = * (enet_uint32 *) hostEntry -> h_addr_list [0];
-
-        return 0;
-    }
-#endif
-
-    if (! inet_pton (AF_INET, name, & address -> host))
-    if (! inet_aton (name, (struct in_addr *) & address -> host))
-        return -1;
-    if (error_code != 0) return error_code;
-    if (result_box == NULL) return -1;
-
-    memcopy(&address, result_box -> ai_addr, result_box -> ai_addrlen);
+    // We simply grab the first information (IPv6 is sorted first so we get IPv6 information when IPv6 is enabled!
+    memcopy(&address, resultList -> ai_addr, resultList -> ai_addrlen);
     address -> port = ENET_NET_TO_HOST_16 (address -> port);
+
+    freeaddrinfo (resultList);
     return error_code;
 }
 
@@ -178,50 +153,24 @@ enet_address_get_host_ip (const ENetAddress * address, char * name, size_t nameL
         case AF_INET:
              host_ptr = & address -> ip.v4.host;
              break;
-    {
-        size_t addrLen = strlen(addr);
-        if (addrLen >= nameLength)
-          return -1;
-        memcpy (name, addr, addrLen + 1);
-    } 
+        case AF_INET6:
+             host_ptr = & address -> ip.v6.host;
+             break;
+        default:
+             host_ptr == NULL; // avoid wild pointer
+    }
     return (inet_ntop (address -> family, host_ptr, name, nameLength) == NULL) ? -1 : 0;
 }
 
 int
 enet_address_get_host (const ENetAddress * address, char * name, size_t nameLength)
 {
-#ifdef HAS_GETNAMEINFO
-    struct sockaddr_in sin;
-    int err;
+    int error_code = getnameinfo((struct sockaddr *) address, enet_address_get_size(address),
+                                 name, nameLength,
+                                 NULL, 0,   // disregard service/socket name
+                                 NI_DGRAM); // lookup via UPD when different
 
-    memset (& sin, 0, sizeof (struct sockaddr_in));
-
-    sin.sin_family = AF_INET;
-    sin.sin_port = ENET_HOST_TO_NET_16 (address -> port);
-    sin.sin_addr.s_addr = address -> host;
-
-    err = getnameinfo ((struct sockaddr *) & sin, sizeof (sin), name, nameLength, NULL, 0, NI_NAMEREQD);
-    if (! err)
-    {
-        if (name != NULL && nameLength > 0 && ! memchr (name, '\0', nameLength))
-          return -1;
-        return 0;
-    }
-    if (err != EAI_NONAME)
-      return -1;
-#else
-#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__DragonFly__)
-    if (hostEntry != NULL)
-    {
-       size_t hostLen = strlen (hostEntry -> h_name);
-       if (hostLen >= nameLength)
-         return -1;
-       memcpy (name, hostEntry -> h_name, hostLen + 1);
-       return 0;
-    }
-#endif
-
-    return enet_address_get_host_ip (address, name, nameLength);
+    return (error_code == 0) ? 0 : enet_address_get_host_ip (address, name, nameLength);
 }
 
 int
@@ -256,9 +205,9 @@ enet_socket_listen (ENetSocket socket, int backlog)
 }
 
 ENetSocket
-enet_socket_create (ENetSocketType type)
+enet_socket_create (ENetSocketType type, enet_uint16 family)
 {
-    return socket (PF_INET, type == ENET_SOCKET_TYPE_DATAGRAM ? SOCK_DGRAM : SOCK_STREAM, 0);
+    return socket (family, type == ENET_SOCKET_TYPE_DATAGRAM ? SOCK_DGRAM : SOCK_STREAM, 0);
 }
 
 int
@@ -311,6 +260,10 @@ enet_socket_set_option (ENetSocket socket, ENetSocketOption option, int value)
 
         case ENET_SOCKOPT_NODELAY:
             result = setsockopt (socket, IPPROTO_TCP, TCP_NODELAY, (char *) & value, sizeof (int));
+            break;
+
+        case ENET_SOCKOPT_IPV6_V6ONLY:
+            result = setsockopt (socket, IPPROTO_IPV6, IPV6_V6ONLY, (char *) & value, sizeof (int));
             break;
 
         default:
