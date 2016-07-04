@@ -589,6 +589,17 @@ ENET_API int        enet_socketset_select (ENetSocket, ENetSocketSet *, ENetSock
 */
 ENET_API int enet_address_set_host (ENetAddress * address, const char * hostName);
 
+/** Attempts to resolve the host named by the parameter hostName and port and sets
+the host field in the address parameter if successful.
+@param address destination to store resolved address
+@param hostName host name to lookup (can be null, in this case a catch all address might be returned)
+@param port the port which should be used for lookup
+@retval 0 on success
+@retval < 0 on failure
+@returns the address of the given hostName in address on success
+*/
+ENET_API int enet_address_set_host_and_port(ENetAddress * address, const char * hostName, enet_uint16 port);
+
 /** Gives the printable form of the IP address specified in the address parameter.
     @param address    address printed
     @param hostName   destination for name, must not be NULL

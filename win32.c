@@ -8,6 +8,7 @@
 #include "enet/enet.h"
 #include <windows.h>
 #include <mmsystem.h>
+#include <stdio.h>
 
 static enet_uint32 timeBase = 0;
 
@@ -105,6 +106,35 @@ enet_address_set_host (ENetAddress * address, const char * name)
 }
 
 int
+enet_address_set_host_and_port (ENetAddress * address, const char * name, enet_uint16 port)
+{
+	struct addrinfo * resultList;
+	int error_code;
+
+	char portAsString[10];
+	int count = snprintf(portAsString, 10, "%d", port);
+	if (count > 9)
+		count = 9;
+	portAsString[count] = 0;
+
+	error_code = getaddrinfo(name, portAsString, &hints, &resultList);
+	if (error_code != 0)
+	{
+		if (resultList != NULL)
+			freeaddrinfo(resultList);
+		return error_code;
+	}
+	if (resultList == NULL) return -1;
+
+	// We simply grab the first information (IPv6 is sorted first so we get IPv6 information when IPv6 is enabled!
+	memcpy(address, resultList->ai_addr, resultList->ai_addrlen);
+	address->port = ENET_NET_TO_HOST_16(address->port);
+
+	freeaddrinfo(resultList);
+	return error_code;
+}
+
+int
 enet_address_get_host_ip (const ENetAddress * address, char * name, size_t nameLength)
 {
     const void * host_ptr;
@@ -136,21 +166,27 @@ enet_address_get_host (const ENetAddress * address, char * name, size_t nameLeng
 int
 enet_socket_bind (ENetSocket socket, const ENetAddress * address)
 {
-    const size_t length = enet_address_get_size (address);
+    int length = enet_address_get_size (address);
+	enet_uint16 port = address->port;
+	enet_uint16 port1 = 0;
     ENetAddress clone;
 
     memcpy (&clone, address, length);
-    clone.port = ENET_HOST_TO_NET_16 (address -> port);
 
-    return bind (socket, (struct sockaddr *) &clone, length);
+	port1 = ENET_HOST_TO_NET_16(port);
+	port1 = ENET_HOST_TO_NET_16(address->port);
+	clone.port = ENET_HOST_TO_NET_16 (address -> port);
+
+    int result = bind (socket, (struct sockaddr *) &clone, length);
+	return result;
 }
 
 int
 enet_socket_get_address (ENetSocket socket, ENetAddress * address)
 {
-    int length = sizeof (struct sockaddr_in6);
+	int length = enet_address_get_size(address);
 
-    if (getsockname (socket, (struct sockaddr *) & address, & length) == -1)
+    if (getsockname (socket, (struct sockaddr *) address, & length) == -1)
       return -1;
 
     address -> port = ENET_NET_TO_HOST_16 (address -> port);
@@ -264,7 +300,7 @@ enet_socket_accept (ENetSocket socket, ENetAddress * address)
     int length = address != NULL ? enet_address_get_size (address) : 0;
 
     result = accept (socket,
-                     address != NULL ? (struct sockaddr *) & address : NULL,
+                     address != NULL ? (struct sockaddr *) address : NULL,
                      address != NULL ? & length : NULL);
     if (result == INVALID_SOCKET)
       return ENET_SOCKET_NULL;
