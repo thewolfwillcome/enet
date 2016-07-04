@@ -298,7 +298,7 @@ enet_protocol_handle_connect (ENetHost * host, ENetProtocolHeader * header, ENet
         }
         else 
         if (currentPeer -> state != ENET_PEER_STATE_CONNECTING &&
-            currentPeer -> address.host == host -> receivedAddress.host)
+            ENET_ADDRESS_HOST_COMPARE(&(currentPeer -> address), &(host -> receivedAddress)))
         {
             if (currentPeer -> address.port == host -> receivedAddress.port &&
                 currentPeer -> connectID == command -> connect.connectID)
@@ -1011,7 +1011,7 @@ enet_protocol_handle_incoming_commands (ENetHost * host, ENetEvent * event)
        if (peer -> state == ENET_PEER_STATE_DISCONNECTED ||
            peer -> state == ENET_PEER_STATE_ZOMBIE ||
            (!ENET_ADDRESS_COMPARE(&(peer -> address), &(host -> receivedAddress)) &&
-            peer -> address.ip.v4.host != ENET_HOST_BROADCAST) || // BAD: IGNORES IPv6 CASE!
+            peer -> address.ip.v4.host != ENET_HOST_BROADCAST) || // BAD: IGNORES IPv6 CASE! TODO(sw) add method "is broadcast"?
            (peer -> outgoingPeerID < ENET_PROTOCOL_MAXIMUM_PEER_ID &&
             sessionID != peer -> incomingSessionID))
          return 0;

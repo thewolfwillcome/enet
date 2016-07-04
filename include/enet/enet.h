@@ -139,6 +139,28 @@ ENET_ADDRESS_COMPARE (ENetAddress * a1, ENetAddress * a2)
     }
 }
 
+/** returns whether the host of two addresses are equal */
+static inline int
+ENET_ADDRESS_HOST_COMPARE (ENetAddress * a1, ENetAddress * a2)
+{
+    if (a1 -> family != a2 -> family) return 1 == 0;
+
+    switch (a1 -> family)
+    {
+    case AF_INET:
+        return (a1->ip.v4.host == a2->ip.v4.host);
+    case AF_INET6:
+        return (a1->ip.v6.flow_info == a2->ip.v6.flow_info &&
+                a1->ip.v6.host[0]   == a2->ip.v6.host[0]   &&
+                a1->ip.v6.host[1]   == a2->ip.v6.host[1]   &&
+                a1->ip.v6.host[2]   == a2->ip.v6.host[2]   &&
+                a1->ip.v6.host[3]   == a2->ip.v6.host[3]   &&
+                a1->ip.v6.scope_id  == a2->ip.v6.scope_id);
+    default:
+        return 1 == 0;
+    }
+}
+
 /**
  * Packet flag bit constants.
  *
