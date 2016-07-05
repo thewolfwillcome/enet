@@ -65,7 +65,7 @@ typedef int socklen_t;
 
 static enet_uint32 timeBase = 0;
 
-static inline size_t
+static inline int
 enet_address_get_size (const ENetAddress * address)
 {
     switch (address -> family)
@@ -179,7 +179,7 @@ enet_address_set_host_and_port(ENetAddress * address, const char * name, enet_ui
 int
 enet_address_get_host_ip (const ENetAddress * address, char * name, size_t nameLength)
 {
-    void * host_ptr;
+    const void * host_ptr;
     switch (address -> family) {
         case AF_INET:
              host_ptr = & address -> ip.v4.host;
@@ -188,9 +188,9 @@ enet_address_get_host_ip (const ENetAddress * address, char * name, size_t nameL
              host_ptr = & address -> ip.v6.host;
              break;
         default:
-             host_ptr == NULL; // avoid wild pointer
+             host_ptr = NULL; // avoid wild pointer
     }
-    return (inet_ntop (address -> family, host_ptr, name, nameLength) == NULL) ? -1 : 0;
+    return (inet_ntop (address -> family, (void *)host_ptr, name, nameLength) == NULL) ? -1 : 0;
 }
 
 int
@@ -207,7 +207,7 @@ enet_address_get_host (const ENetAddress * address, char * name, size_t nameLeng
 int
 enet_socket_bind (ENetSocket socket, const ENetAddress * address)
 {
-    const size_t length = enet_address_get_size (address);
+    socklen_t length = enet_address_get_size (address);
     ENetAddress clone;
 
     memcpy (& clone, address, length);
@@ -219,7 +219,7 @@ enet_socket_bind (ENetSocket socket, const ENetAddress * address)
 int
 enet_socket_get_address (ENetSocket socket, ENetAddress * address)
 {
-	const size_t length = enet_address_get_size(address);
+	socklen_t length = enet_address_get_size(address);
 
     if (getsockname (socket, (struct sockaddr *)address, & length) == -1)
       return -1;
@@ -325,7 +325,7 @@ int
 enet_socket_connect (ENetSocket socket, const ENetAddress * address)
 {
     int result;
-    size_t length = enet_address_get_size (address);
+    socklen_t length = enet_address_get_size (address);
     ENetAddress clone;
 
     memcpy (& clone, address, length);
@@ -342,8 +342,7 @@ ENetSocket
 enet_socket_accept (ENetSocket socket, ENetAddress * address)
 {
     int result;
-    // only call enet_address_get_size if ptr is valid
-    socklen_t length = sizeof (struct sockaddr_in6);
+    socklen_t length = address != NULL ? enet_address_get_size (address) : 0;
 
     result = accept (socket,
                      address != NULL ? (struct sockaddr *) address : NULL,
