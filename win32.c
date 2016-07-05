@@ -167,14 +167,9 @@ int
 enet_socket_bind (ENetSocket socket, const ENetAddress * address)
 {
     int length = enet_address_get_size (address);
-	enet_uint16 port = address->port;
-	enet_uint16 port1 = 0;
     ENetAddress clone;
 
     memcpy (&clone, address, length);
-
-	port1 = ENET_HOST_TO_NET_16(port);
-	port1 = ENET_HOST_TO_NET_16(address->port);
 	clone.port = ENET_HOST_TO_NET_16 (address -> port);
 
     int result = bind (socket, (struct sockaddr *) &clone, length);

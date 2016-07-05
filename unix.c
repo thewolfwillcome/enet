@@ -421,8 +421,8 @@ enet_socket_receive (ENetSocket socket,
 
     if (address != NULL)
     {
-        msgHdr.msg_name = & address;
-        msgHdr.msg_namelen =  sizeof (struct sockaddr_in6);
+        msgHdr.msg_name = address;
+        msgHdr.msg_namelen =  enet_address_get_size (address);
     }
 
     msgHdr.msg_iov = (struct iovec *) buffers;
