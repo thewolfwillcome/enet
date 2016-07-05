@@ -99,6 +99,27 @@ typedef enum _ENetSocketShutdown
  * broadcast, the address is updated from ENET_HOST_BROADCAST to the server's
  * actual IP address.
  */
+#ifdef __APPLE__
+/* Under Apple the structure differs from windows and linux */
+typedef struct _ENetAddress
+{
+   enet_uint8 len;
+   enet_uint8 family;
+   enet_uint16 port;
+   union {
+     struct {
+       enet_uint32 host;
+       // using uint32, not uint8 for padding to help with alignment
+       enet_uint32 padding[5];
+     } v4;
+     struct {
+       enet_uint32 flow_info;
+       enet_uint32 host[4];
+       enet_uint32 scope_id;
+     } v6;
+   } ip;
+} ENetAddress;
+#else
 typedef struct _ENetAddress
 {
    enet_uint16 family;
@@ -116,6 +137,7 @@ typedef struct _ENetAddress
      } v6;
    } ip;
 } ENetAddress;
+#endif
 
 /** returns whether two addresses are equal */
 static inline int
